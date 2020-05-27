@@ -182,6 +182,11 @@ didOccurWithMessage:(NSString * _Nonnull)message
   NSLog(@"logWith: %ld message: '%@'", (long)level, message);
 }
 
+- (dispatch_queue_t)methodQueue
+{
+  return dispatch_queue_create("com.rn-dfu", DISPATCH_QUEUE_SERIAL);
+}
+
 RCT_EXPORT_METHOD(startDFU:(NSString *)deviceAddress
                   deviceName:(NSString *)deviceName
                   filePath:(NSString *)filePath
@@ -214,21 +219,22 @@ RCT_EXPORT_METHOD(startDFU:(NSString *)deviceAddress
       } else {
         CBPeripheral * peripheral = [peripherals objectAtIndex:0];
 
-        NSURL * url = [NSURL URLWithString:filePath];
-
-        DFUFirmware * firmware = [[DFUFirmware alloc] initWithUrlToZipFile:url];
+        //NSURL * url = [NSURL URLWithString:filePath];
+        //DFUFirmware * firmware = [[DFUFirmware alloc] initWithUrlToZipFile:url];
+        NSData *zipData = [NSData dataWithContentsOfFile:filePath];
+        DFUFirmware * firmware = [[DFUFirmware alloc] initWithZipFile:zipData];
 
         DFUServiceInitiator * initiator = [[[DFUServiceInitiator alloc]
                                             initWithCentralManager:centralManager
                                             target:peripheral]
-                                           withFirmware:firmware];
-
+                                            withFirmware:firmware];
+    
         initiator.logger = self;
         initiator.delegate = self;
         initiator.progressDelegate = self;
         initiator.alternativeAdvertisingNameEnabled = alternativeAdvertisingNameEnabled;
 
-        DFUServiceController * controller = [initiator start];
+        DFUServiceController * controller = [initiator startWithTarget: peripheral];
       }
     }
   }
